@@ -1,0 +1,10 @@
+src/
+tests/
+tsconfig.json
+*.test.ts
+*.spec.ts
+.git/
+.github/
+node_modules/
+coverage/
+.nyc_output/
