@@ -1,5 +1,5 @@
 {
-  "name": "@nogo/prisma-bun-sqlite-adapter",
+  "name": "@synapsenwerkstatt/prisma-bun-sqlite-adapter",
   "version": "1.0.0",
   "description": "Prisma driver adapter for bun:sqlite",
   "main": "dist/index.js",

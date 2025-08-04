@@ -17,14 +17,14 @@ A high-performance Prisma driver adapter that enables seamless integration betwe
 ## Installation
 
 ```bash
-bun add @cgenogo/prisma-bun-sqlite-adapter
+bun add @synapsenwerkstatt/prisma-bun-sqlite-adapter
 ```
 
 ## Quick Start
 
 ```typescript
 import { PrismaClient } from '@prisma/client'
-import { PrismaBunSQLite } from '@cgenogo/prisma-bun-sqlite-adapter'
+import { PrismaBunSQLite } from '@synapsenwerkstatt/prisma-bun-sqlite-adapter'
 
 // Create adapter factory
 const adapter = new PrismaBunSQLite({ url: 'file:database.db' })
@@ -50,7 +50,7 @@ interface BunSQLiteFactoryParams {
 ### Usage Examples
 
 ```typescript
-import { PrismaBunSQLite } from '@cgenogo/prisma-bun-sqlite-adapter'
+import { PrismaBunSQLite } from '@synapsenwerkstatt/prisma-bun-sqlite-adapter'
 
 // File database
 const adapter = new PrismaBunSQLite({ 
