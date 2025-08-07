@@ -92,13 +92,15 @@ class BunSQLiteQueryable implements SqlQueryable {
   }
 
   protected onError(error: any): never {
-    debug("Error in performIO: %O", error);
+    debug("Error in query execution: %O", error);
     throw new DriverAdapterError(convertDriverError(error));
   }
 }
 
 // Transaction wrapper
 class BunSQLiteTransaction extends BunSQLiteQueryable implements Transaction {
+  private _state: 'active' | 'committed' | 'rolled_back' = 'active';
+
   constructor(
     db: Database,
     readonly options: TransactionOptions,
@@ -107,12 +109,54 @@ class BunSQLiteTransaction extends BunSQLiteQueryable implements Transaction {
     super(db);
   }
 
+  async queryRaw(query: SqlQuery): Promise<SqlResultSet> {
+    if (this._state !== 'active') {
+      throw new DriverAdapterError({
+        kind: "TransactionAlreadyClosed",
+        cause: "Cannot execute query on a closed transaction.",
+      });
+    }
+    return super.queryRaw(query);
+  }
+
+  async executeRaw(query: SqlQuery): Promise<number> {
+    if (this._state !== 'active') {
+      throw new DriverAdapterError({
+        kind: "TransactionAlreadyClosed",
+        cause: "Cannot execute query on a closed transaction.",
+      });
+    }
+    
+    // Handle COMMIT/ROLLBACK statements specially
+    const sql = query.sql.trim().toUpperCase();
+    if (sql === 'COMMIT') {
+      await this.commit();
+      return 0; // Return 0 for successful commit
+    }
+    if (sql === 'ROLLBACK') {
+      await this.rollback();
+      return 0; // Return 0 for successful rollback
+    }
+    
+    return super.executeRaw(query);
+  }
+
   commit(): Promise<void> {
     debug(`[js::commit]`);
+    if (this._state !== 'active') {
+      // Silently handle multiple commit attempts (might happen if Prisma calls both executeRaw("COMMIT") and commit())
+      debug(`[js::commit] Transaction already closed (state: ${this._state}), ignoring commit`);
+      return Promise.resolve();
+    }
+    
     try {
+      // Execute COMMIT directly on database, bypassing our executeRaw to avoid recursion
       this.db.query("COMMIT").run();
+      this._state = 'committed';
     } catch (e) {
-      this.onError(e);
+      this._state = 'rolled_back';
+      debug("Error in commit: %O", e);
+      throw new DriverAdapterError(convertDriverError(e));
     } finally {
       this.unlockParent();
     }
@@ -121,10 +165,21 @@ class BunSQLiteTransaction extends BunSQLiteQueryable implements Transaction {
 
   rollback(): Promise<void> {
     debug(`[js::rollback]`);
+    if (this._state !== 'active') {
+      // Silently ignore rollback attempts on already closed transactions
+      // This handles Prisma's cleanup behavior where it may try to rollback after commit
+      debug(`[js::rollback] Transaction already closed (state: ${this._state}), ignoring rollback`);
+      return Promise.resolve();
+    }
+
     try {
+      // Execute ROLLBACK directly on database, bypassing our executeRaw to avoid recursion
       this.db.query("ROLLBACK").run();
+      this._state = 'rolled_back';
     } catch (e) {
-      // Ignore rollback errors as the transaction might already be rolled back
+      this._state = 'rolled_back';
+      debug("Error in rollback: %O", e);
+      throw new DriverAdapterError(convertDriverError(e));
     } finally {
       this.unlockParent();
     }

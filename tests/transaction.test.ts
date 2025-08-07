@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { Database } from "bun:sqlite";
 import { PrismaBunSQLiteAdapter } from "../src/adapter";
+import { DriverAdapterError } from "@prisma/driver-adapter-utils";
 
 describe("Transaction Tests", () => {
   let db: Database;
@@ -261,6 +262,116 @@ describe("Transaction Tests", () => {
       });
 
       expect(finalBalance.rows[0][0]).toBe(800);
+    });
+  });
+
+  describe("transaction already closed errors", () => {
+    it("should silently ignore rollback attempts after commit", async () => {
+      const transaction = await adapter.startTransaction();
+
+      await transaction.executeRaw({
+        sql: "UPDATE accounts SET balance = balance - ? WHERE name = ?",
+        args: ["100", "Alice"],
+        argTypes: ["Int32", "Text"]
+      });
+
+      await transaction.commit();
+
+      // Should not throw error - Prisma may attempt rollback during cleanup
+      await expect(transaction.rollback()).resolves.toBeUndefined();
+    });
+
+    it("should silently ignore multiple commit attempts", async () => {
+      const transaction = await adapter.startTransaction();
+
+      await transaction.executeRaw({
+        sql: "UPDATE accounts SET balance = balance - ? WHERE name = ?",
+        args: ["100", "Alice"],
+        argTypes: ["Int32", "Text"]
+      });
+
+      await transaction.commit();
+
+      // Should not throw error on second commit attempt
+      await expect(transaction.commit()).resolves.toBeUndefined();
+    });
+
+    it("should silently ignore multiple rollback attempts", async () => {
+      const transaction = await adapter.startTransaction();
+
+      await transaction.executeRaw({
+        sql: "UPDATE accounts SET balance = balance - ? WHERE name = ?",
+        args: ["100", "Alice"],
+        argTypes: ["Int32", "Text"]
+      });
+
+      await transaction.rollback();
+
+      // Should not throw error on second rollback
+      await expect(transaction.rollback()).resolves.toBeUndefined();
+    });
+
+    it("should throw error when trying to query after commit", async () => {
+      const transaction = await adapter.startTransaction();
+
+      await transaction.executeRaw({
+        sql: "UPDATE accounts SET balance = balance - ? WHERE name = ?",
+        args: ["100", "Alice"],
+        argTypes: ["Int32", "Text"]
+      });
+
+      await transaction.commit();
+
+      try {
+        await transaction.queryRaw({
+          sql: "SELECT * FROM accounts WHERE name = ?",
+          args: ["Alice"],
+          argTypes: ["Text"]
+        });
+        expect.unreachable("Should have thrown error");
+      } catch (error) {
+        expect(error).toBeInstanceOf(DriverAdapterError);
+        expect((error as DriverAdapterError).cause.kind).toBe("TransactionAlreadyClosed");
+      }
+    });
+
+    it("should throw error when trying to execute after rollback", async () => {
+      const transaction = await adapter.startTransaction();
+
+      await transaction.executeRaw({
+        sql: "UPDATE accounts SET balance = balance - ? WHERE name = ?",
+        args: ["100", "Alice"],
+        argTypes: ["Int32", "Text"]
+      });
+
+      await transaction.rollback();
+
+      try {
+        await transaction.executeRaw({
+          sql: "UPDATE accounts SET balance = balance + ? WHERE name = ?",
+          args: ["50", "Bob"],
+          argTypes: ["Int32", "Text"]
+        });
+        expect.unreachable("Should have thrown error");
+      } catch (error) {
+        expect(error).toBeInstanceOf(DriverAdapterError);
+        expect((error as DriverAdapterError).cause.kind).toBe("TransactionAlreadyClosed");
+      }
+    });
+
+    it("should silently ignore commit after rollback", async () => {
+      const transaction = await adapter.startTransaction();
+
+      await transaction.executeRaw({
+        sql: "UPDATE accounts SET balance = balance - ? WHERE name = ?",
+        args: ["100", "Alice"],
+        argTypes: ["Int32", "Text"]
+      });
+
+      await transaction.rollback();
+
+      // Should not throw error when trying to commit after rollback
+      await expect(transaction.commit()).resolves.toBeUndefined();
     });
   });
 });
