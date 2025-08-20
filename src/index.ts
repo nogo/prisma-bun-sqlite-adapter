@@ -1,1 +1,1 @@
-export { PrismaBunSQLiteAdapterFactory as PrismaBunSQLite } from './adapter'
+export { PrismaBunSQLiteAdapterFactory as PrismaBunSQLite, WALConfig } from './adapter'

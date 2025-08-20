@@ -10,7 +10,7 @@ describe("Transaction Tests", () => {
   beforeEach(() => {
     db = new Database(":memory:");
     adapter = new PrismaBunSQLiteAdapter(db);
-    
+
     // Create test table
     db.exec(`
       CREATE TABLE accounts (
@@ -32,10 +32,10 @@ describe("Transaction Tests", () => {
   describe("startTransaction", () => {
     it("should create a transaction with default isolation level", async () => {
       const transaction = await adapter.startTransaction();
-      
+
       expect(transaction).toBeDefined();
       expect(transaction.provider).toBe("sqlite");
-      expect(transaction.adapterName).toBe("bun-sqlite");
+      expect(transaction.adapterName).toBe("@synapsenwerkstatt/prisma-bun-sqlite-adapter");
       expect(transaction.options.usePhantomQuery).toBe(false);
 
       await transaction.rollback();
@@ -43,7 +43,7 @@ describe("Transaction Tests", () => {
 
     it("should accept SERIALIZABLE isolation level", async () => {
       const transaction = await adapter.startTransaction("SERIALIZABLE");
-      
+
       expect(transaction).toBeDefined();
       await transaction.rollback();
     });

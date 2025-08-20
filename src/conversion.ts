@@ -184,14 +184,28 @@ export function mapRow(row: Row, columnTypes: ColumnType[]): unknown[] {
       continue;
     }
 
-    // Decode DateTime values saved as numeric timestamps which is the
-    // format used by the native quaint sqlite connector.
-    if (
-      ["number", "bigint"].includes(typeof value) &&
-      columnTypes[i] === ColumnTypeEnum.DateTime
-    ) {
-      result[i] = new Date(Number(value)).toISOString();
-      continue;
+    // Handle DateTime values - can be numeric timestamps or ISO strings
+    if (columnTypes[i] === ColumnTypeEnum.DateTime) {
+      if (["number", "bigint"].includes(typeof value)) {
+        // Numeric timestamps (native quaint format)
+        result[i] = new Date(Number(value)).toISOString();
+        continue;
+      } else if (typeof value === "string") {
+        // ISO string format (SQLite default DATETIME format)
+        // Handle various SQLite datetime formats:
+        // - "2025-08-20 14:42:26" (DATETIME)
+        // - "2025-08-20T14:42:26.556+00:00" (ISO format)
+        // - "2025-08-20T14:42:26.556Z" (ISO format with Z)
+        const date = new Date(value);
+        if (!isNaN(date.getTime())) {
+          result[i] = date.toISOString();
+        } else {
+          // If it's not a valid date string, leave as is (shouldn't happen)
+          debug("Invalid datetime string:", value);
+          result[i] = value;
+        }
+        continue;
+      }
     }
 
     // Convert bigint to string as we can only use JSON-encodable types here.

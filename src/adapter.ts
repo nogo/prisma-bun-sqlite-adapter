@@ -12,10 +12,12 @@ import { Debug, DriverAdapterError } from "@prisma/driver-adapter-utils";
 import { Mutex } from "async-mutex";
 import { Database } from "bun:sqlite";
 
+import { name as packageName } from '../package.json'
 import { convertDriverError } from "./errors";
 import { getColumnTypes, mapQueryArgs, mapRow, Row } from "./conversion";
 
 const debug = Debug("prisma:driver-adapter:bun-sqlite");
+type StdClient = Database
 const LOCK_TAG = Symbol();
 
 type BunSQLiteResultSet = {
@@ -27,9 +29,9 @@ type BunSQLiteResultSet = {
 // SqlQueryable implementation using bun:sqlite
 class BunSQLiteQueryable implements SqlQueryable {
   readonly provider = "sqlite";
-  readonly adapterName = "bun-sqlite";
+  readonly adapterName = packageName;
 
-  constructor(protected readonly db: Database) {}
+  constructor(protected readonly db: Database) { }
 
   async queryRaw(query: SqlQuery): Promise<SqlResultSet> {
     const tag = "[js::queryRaw]";
@@ -63,6 +65,40 @@ class BunSQLiteQueryable implements SqlQueryable {
     }
   }
 
+  private getTableFromQuery(sql: string): string | null {
+    // Simple regex to extract table name from SELECT queries
+    // This handles common cases like SELECT ... FROM table, SELECT ... FROM "table", etc.
+    const match = sql.match(/\bFROM\s+(?:`([^`]+)`|"([^"]+)"|(\w+))/i);
+    return match ? (match[1] || match[2] || match[3]) : null;
+  }
+
+  private async getColumnTypes(tableName: string, columnNames: string[]): Promise<Array<string | null>> {
+    try {
+      const tableInfoStmt = this.db.query(`PRAGMA table_info(${tableName})`);
+      const tableInfo = tableInfoStmt.all() as Array<{
+        cid: number;
+        name: string;
+        type: string;
+        notnull: number;
+        dflt_value: string | null;
+        pk: number;
+      }>;
+
+      // Create a map of column names to types
+      const typeMap = new Map<string, string>();
+      tableInfo.forEach(col => {
+        typeMap.set(col.name, col.type);
+      });
+
+      // Return types in the same order as columnNames
+      return columnNames.map(name => typeMap.get(name) || null);
+    } catch (e) {
+      debug("Failed to get column types for table %s: %O", tableName, e);
+      // Fall back to null types if we can't get schema info
+      return columnNames.map(() => null);
+    }
+  }
+
   private async performIO(query: SqlQuery): Promise<BunSQLiteResultSet> {
     try {
       const stmt = this.db.query(query.sql);
@@ -79,8 +115,17 @@ class BunSQLiteQueryable implements SqlQueryable {
         });
       }
 
+      // Try to get proper column types from table schema
+      let declaredTypes: Array<string | null>;
+      const tableName = this.getTableFromQuery(query.sql);
+      if (tableName) {
+        declaredTypes = await this.getColumnTypes(tableName, columns);
+      } else {
+        declaredTypes = columns.map((col: any) => null);
+      }
+
       const resultSet = {
-        declaredTypes: columns.map((col: any) => null),
+        declaredTypes,
         columnNames: columns,
         values: stmt.values(...(args as any)) as unknown[][],
       };
@@ -126,7 +171,7 @@ class BunSQLiteTransaction extends BunSQLiteQueryable implements Transaction {
         cause: "Cannot execute query on a closed transaction.",
       });
     }
-    
+
     // Handle COMMIT/ROLLBACK statements specially
     const sql = query.sql.trim().toUpperCase();
     if (sql === 'COMMIT') {
@@ -137,7 +182,7 @@ class BunSQLiteTransaction extends BunSQLiteQueryable implements Transaction {
       await this.rollback();
       return 0; // Return 0 for successful rollback
     }
-    
+
     return super.executeRaw(query);
   }
 
@@ -148,7 +193,7 @@ class BunSQLiteTransaction extends BunSQLiteQueryable implements Transaction {
       debug(`[js::commit] Transaction already closed (state: ${this._state}), ignoring commit`);
       return Promise.resolve();
     }
-    
+
     try {
       // Execute COMMIT directly on database, bypassing our executeRaw to avoid recursion
       this.db.query("COMMIT").run();
@@ -190,8 +235,7 @@ class BunSQLiteTransaction extends BunSQLiteQueryable implements Transaction {
 // Primary adapter
 export class PrismaBunSQLiteAdapter
   extends BunSQLiteQueryable
-  implements SqlDriverAdapter
-{
+  implements SqlDriverAdapter {
   [LOCK_TAG] = new Mutex();
 
   constructor(db: Database) {
@@ -246,30 +290,99 @@ export class PrismaBunSQLiteAdapter
 }
 
 // Factory for migrations and connections
+export type WALConfig = {
+  enabled: boolean;
+  synchronous?: 'OFF' | 'NORMAL' | 'FULL' | 'EXTRA';
+  walAutocheckpoint?: number;
+  busyTimeout?: number;
+};
+
 type BunSQLiteFactoryParams = {
   url: ":memory:" | (string & {});
   shadowDatabaseURL?: ":memory:" | (string & {});
+  walMode?: boolean | WALConfig;
 };
 
 export class PrismaBunSQLiteAdapterFactory
-  implements SqlMigrationAwareDriverAdapterFactory
-{
+  implements SqlMigrationAwareDriverAdapterFactory {
   readonly provider = "sqlite";
-  readonly adapterName = "bun-sqlite";
+  readonly adapterName = packageName;
 
-  constructor(private readonly config: BunSQLiteFactoryParams) {}
+  constructor(private readonly config: BunSQLiteFactoryParams) { }
 
   connect(): Promise<SqlDriverAdapter> {
-    const url = this.config.url.replace("file:", "").replace("//", "");
-    const db = new Database(url);
-    return Promise.resolve(new PrismaBunSQLiteAdapter(db));
+    return Promise.resolve(new PrismaBunSQLiteAdapter(createBunSqliteClient({ ...this.config })));
   }
 
   connectToShadowDb(): Promise<SqlDriverAdapter> {
     const url = (this.config.shadowDatabaseURL ?? ":memory:")
-      .replace("file:", "")
-      .replace("//", "");
-    const db = new Database(url);
-    return Promise.resolve(new PrismaBunSQLiteAdapter(db));
+    return Promise.resolve(new PrismaBunSQLiteAdapter(createBunSqliteClient({ ...this.config, url })));
+  }
+}
+
+function createBunSqliteClient(input: BunSQLiteFactoryParams): StdClient {
+  const { url, walMode } = input
+  const filename = url.replace(/^file:/, '').replace("//", "")
+  const db = new Database(filename, { safeIntegers: true })
+
+  // Configure WAL mode if enabled
+  if (walMode) {
+    try {
+      configureWALMode(db, walMode);
+    } catch (e) {
+      db.close();
+      throw new DriverAdapterError({
+        kind: "GenericJs",
+        id: 0,
+        originalMessage: `Failed to configure WAL mode: ${e instanceof Error ? e.message : String(e)}`,
+      });
+    }
+  }
+
+  return db
+}
+
+function configureWALMode(db: Database, walConfig: boolean | WALConfig): void {
+  // Normalize config
+  const config: WALConfig = typeof walConfig === 'boolean' 
+    ? { enabled: walConfig }
+    : walConfig;
+
+  if (!config.enabled) {
+    return;
+  }
+
+  // Set journal mode to WAL
+  const journalResult = db.query("PRAGMA journal_mode = WAL;").get() as { journal_mode: string } | undefined;
+  const currentMode = journalResult?.journal_mode?.toLowerCase();
+  
+  // Memory databases don't support WAL mode, silently ignore
+  if (currentMode === 'memory') {
+    debug("WAL mode not supported for in-memory database, skipping");
+    return;
+  }
+  
+  if (!journalResult || currentMode !== 'wal') {
+    throw new Error(`Failed to enable WAL mode. Current mode: ${currentMode || 'unknown'}`);
+  }
+
+  debug("WAL mode enabled successfully");
+
+  // Configure synchronous mode if specified
+  if (config.synchronous) {
+    db.exec(`PRAGMA synchronous = ${config.synchronous};`);
+    debug(`WAL synchronous mode set to: ${config.synchronous}`);
+  }
+
+  // Configure WAL autocheckpoint if specified
+  if (config.walAutocheckpoint !== undefined) {
+    db.exec(`PRAGMA wal_autocheckpoint = ${config.walAutocheckpoint};`);
+    debug(`WAL autocheckpoint set to: ${config.walAutocheckpoint}`);
+  }
+
+  // Configure busy timeout if specified
+  if (config.busyTimeout !== undefined) {
+    db.exec(`PRAGMA busy_timeout = ${config.busyTimeout};`);
+    debug(`Busy timeout set to: ${config.busyTimeout}ms`);
   }
 }

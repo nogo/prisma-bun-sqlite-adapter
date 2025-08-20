@@ -163,6 +163,68 @@ describe("Conversion Utilities", () => {
       ]);
     });
 
+    it("should convert datetime ISO strings to ISO strings", () => {
+      const row: Row = {
+        length: 4,
+        0: "2025-08-20 14:42:26",           // SQLite DATETIME format
+        1: "2025-08-20T14:42:26.556+00:00", // ISO format with timezone
+        2: "2025-08-20T14:42:26.556Z",      // ISO format with Z
+        3: "2025-08-20T14:42:26"            // ISO format without timezone
+      };
+      const columnTypes = [
+        ColumnTypeEnum.DateTime,
+        ColumnTypeEnum.DateTime,
+        ColumnTypeEnum.DateTime,
+        ColumnTypeEnum.DateTime
+      ];
+
+      const result = mapRow(row, columnTypes);
+
+      expect(result).toEqual([
+        "2025-08-20T14:42:26.000Z",
+        "2025-08-20T14:42:26.556Z", 
+        "2025-08-20T14:42:26.556Z",
+        "2025-08-20T14:42:26.000Z"
+      ]);
+    });
+
+    it("should handle invalid datetime strings gracefully", () => {
+      const row: Row = {
+        length: 2,
+        0: "invalid-date-string",
+        1: "not-a-date"
+      };
+      const columnTypes = [ColumnTypeEnum.DateTime, ColumnTypeEnum.DateTime];
+
+      const result = mapRow(row, columnTypes);
+
+      // Invalid date strings should be left as-is
+      expect(result).toEqual(["invalid-date-string", "not-a-date"]);
+    });
+
+    it("should handle mixed datetime formats in same row", () => {
+      const timestamp = 1640995200000; // 2022-01-01T00:00:00.000Z
+      const row: Row = {
+        length: 3,
+        0: timestamp,                        // Numeric timestamp
+        1: "2025-08-20 14:42:26",           // SQLite DATETIME format
+        2: "regular text"                    // Non-datetime column
+      };
+      const columnTypes = [
+        ColumnTypeEnum.DateTime,
+        ColumnTypeEnum.DateTime,
+        ColumnTypeEnum.Text
+      ];
+
+      const result = mapRow(row, columnTypes);
+
+      expect(result).toEqual([
+        "2022-01-01T00:00:00.000Z",
+        "2025-08-20T14:42:26.000Z",
+        "regular text"
+      ]);
+    });
+
     it("should convert bigint to string", () => {
       const row: Row = {
         length: 2,

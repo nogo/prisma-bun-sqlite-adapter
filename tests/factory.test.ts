@@ -26,7 +26,7 @@ describe("PrismaBunSQLiteAdapterFactory", () => {
       });
 
       expect(factory.provider).toBe("sqlite");
-      expect(factory.adapterName).toBe("bun-sqlite");
+      expect(factory.adapterName).toBe("@synapsenwerkstatt/prisma-bun-sqlite-adapter");
     });
   });
 
@@ -40,7 +40,7 @@ describe("PrismaBunSQLiteAdapterFactory", () => {
 
       expect(adapter).toBeDefined();
       expect(adapter.provider).toBe("sqlite");
-      expect(adapter.adapterName).toBe("bun-sqlite");
+      expect(adapter.adapterName).toBe("@synapsenwerkstatt/prisma-bun-sqlite-adapter");
 
       await adapter.dispose();
     });
@@ -128,14 +128,14 @@ describe("PrismaBunSQLiteAdapterFactory", () => {
 
       expect(shadowAdapter).toBeDefined();
       expect(shadowAdapter.provider).toBe("sqlite");
-      expect(shadowAdapter.adapterName).toBe("bun-sqlite");
+      expect(shadowAdapter.adapterName).toBe("@synapsenwerkstatt/prisma-bun-sqlite-adapter");
 
       await shadowAdapter.dispose();
     });
 
     it("should create shadow database with specified shadow URL", async () => {
       const shadowDbPath = join(tmpdir(), `shadow-${Date.now()}.db`);
-      
+
       factory = new PrismaBunSQLiteAdapterFactory({
         url: testDbPath,
         shadowDatabaseURL: shadowDbPath
@@ -156,7 +156,7 @@ describe("PrismaBunSQLiteAdapterFactory", () => {
 
     it("should handle file:// format for shadow database URL", async () => {
       const shadowDbPath = join(tmpdir(), `shadow-${Date.now()}.db`);
-      
+
       factory = new PrismaBunSQLiteAdapterFactory({
         url: testDbPath,
         shadowDatabaseURL: `file://${shadowDbPath}`
