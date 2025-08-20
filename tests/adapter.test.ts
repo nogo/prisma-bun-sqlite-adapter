@@ -258,7 +258,7 @@ describe("PrismaBunSQLiteAdapter", () => {
         7,      // logs - TEXT
         10,     // rolled_back_at - DATETIME
         10,     // started_at - DATETIME
-        128     // applied_steps_count - INTEGER UNSIGNED (treated as UnknownNumber due to UNSIGNED keyword)
+        0       // applied_steps_count - INTEGER UNSIGNED (correctly mapped to Int32)
       ]);
 
       // Verify datetime columns are properly converted

@@ -24,7 +24,13 @@ function mapDeclType(declType: string | null): ColumnType | null {
     return null;
   }
 
-  switch (declType.toUpperCase()) {
+  // Normalize the type string by removing length specifiers and extra spaces
+  const normalizedType = declType.toUpperCase().trim();
+  
+  // Handle types with length specifiers (e.g., VARCHAR(255), CHAR(10))
+  const baseType = normalizedType.replace(/\([^)]*\)/, '').trim();
+  
+  switch (baseType) {
     case "":
       return null;
     case "DECIMAL":
@@ -37,14 +43,20 @@ function mapDeclType(declType: string | null): ColumnType | null {
     case "REAL":
       return ColumnTypeEnum.Double;
     case "TINYINT":
+    case "TINYINT UNSIGNED":
     case "SMALLINT":
+    case "SMALLINT UNSIGNED":
     case "MEDIUMINT":
+    case "MEDIUMINT UNSIGNED":
     case "INT":
+    case "INT UNSIGNED":
     case "INTEGER":
+    case "INTEGER UNSIGNED":
     case "SERIAL":
     case "INT2":
       return ColumnTypeEnum.Int32;
     case "BIGINT":
+    case "BIGINT UNSIGNED":
     case "UNSIGNED BIG INT":
     case "INT8":
       return ColumnTypeEnum.Int64;
@@ -57,6 +69,7 @@ function mapDeclType(declType: string | null): ColumnType | null {
       return ColumnTypeEnum.Date;
     case "TEXT":
     case "CLOB":
+    case "CHAR":
     case "CHARACTER":
     case "VARCHAR":
     case "VARYING CHARACTER":
@@ -68,6 +81,7 @@ function mapDeclType(declType: string | null): ColumnType | null {
       return ColumnTypeEnum.Bytes;
     case "BOOLEAN":
       return ColumnTypeEnum.Boolean;
+    case "JSON":
     case "JSONB":
       return ColumnTypeEnum.Json;
     default:

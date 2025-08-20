@@ -1,6 +1,6 @@
 {
   "name": "@synapsenwerkstatt/prisma-bun-sqlite-adapter",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Prisma driver adapter for bun:sqlite",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
