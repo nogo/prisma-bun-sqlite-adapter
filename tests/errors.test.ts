@@ -154,7 +154,7 @@ describe("Error Handling Tests", () => {
       await adapter.executeRaw({
         sql: "INSERT INTO users (email, name) VALUES (?, ?)",
         args: ["test@example.com", "Test User"],
-        argTypes: ["Text", "Text"]
+        argTypes: [{ scalarType: "string", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
       });
 
       // Try to insert duplicate email
@@ -162,7 +162,7 @@ describe("Error Handling Tests", () => {
         adapter.executeRaw({
           sql: "INSERT INTO users (email, name) VALUES (?, ?)",
           args: ["test@example.com", "Another User"],
-          argTypes: ["Text", "Text"]
+          argTypes: [{ scalarType: "string", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
         })
       ).rejects.toThrow(DriverAdapterError);
     });
@@ -172,7 +172,7 @@ describe("Error Handling Tests", () => {
         adapter.executeRaw({
           sql: "INSERT INTO users (email) VALUES (?)",
           args: ["test@example.com"],
-          argTypes: ["Text"]
+          argTypes: [{ scalarType: "string", arity: "scalar" }]
         })
       ).rejects.toThrow(DriverAdapterError);
     });
@@ -231,7 +231,7 @@ describe("Error Handling Tests", () => {
       await transaction.executeRaw({
         sql: "INSERT INTO users (email, name) VALUES (?, ?)",
         args: ["test@example.com", "Test User"],
-        argTypes: ["Text", "Text"]
+        argTypes: [{ scalarType: "string", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
       });
 
       // Invalid insert (duplicate email)
@@ -239,7 +239,7 @@ describe("Error Handling Tests", () => {
         transaction.executeRaw({
           sql: "INSERT INTO users (email, name) VALUES (?, ?)",
           args: ["test@example.com", "Another User"],
-          argTypes: ["Text", "Text"]
+          argTypes: [{ scalarType: "string", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
         })
       ).rejects.toThrow(DriverAdapterError);
 
@@ -259,7 +259,7 @@ describe("Error Handling Tests", () => {
       await adapter.executeRaw({
         sql: "INSERT INTO users (id, email, name) VALUES (?, ?, ?)",
         args: ["1", "test@example.com", "Test User"],
-        argTypes: ["Int32", "Text", "Text"]
+        argTypes: [{ scalarType: "int", arity: "scalar" }, { scalarType: "string", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
       });
 
       // Try to insert profile with non-existent user_id
@@ -267,7 +267,7 @@ describe("Error Handling Tests", () => {
         adapter.executeRaw({
           sql: "INSERT INTO profiles (user_id, bio) VALUES (?, ?)",
           args: ["999", "Test bio"],
-          argTypes: ["Int32", "Text"]
+          argTypes: [{ scalarType: "int", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
         })
       ).rejects.toThrow(DriverAdapterError);
     });

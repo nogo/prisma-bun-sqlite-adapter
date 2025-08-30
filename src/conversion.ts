@@ -235,11 +235,11 @@ export function mapRow(row: Row, columnTypes: ColumnType[]): unknown[] {
 export function mapQueryArgs(args: unknown[], argTypes: ArgType[]): unknown[] {
   return args.map((arg, i) => {
     const argType = argTypes[i];
-    if (argType === "Int32") {
+    if (argType.scalarType === "int") {
       return Number.parseInt(arg as string);
     }
 
-    if (argType === "Float" || argType === "Double") {
+    if (argType.scalarType === "float" || argType.scalarType === "decimal") {
       return Number.parseFloat(arg as string);
     }
 

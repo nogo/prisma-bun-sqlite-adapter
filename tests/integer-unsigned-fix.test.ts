@@ -45,7 +45,7 @@ describe("INTEGER UNSIGNED Type Support", () => {
         "2025-08-20T15:31:44.397+00:00",
         1
       ],
-      argTypes: ["Text", "Text", "Text", "DateTime", "DateTime", "Int32"]
+      argTypes: [{ scalarType: "string", arity: "scalar" }, { scalarType: "string", arity: "scalar" }, { scalarType: "string", arity: "scalar" }, { scalarType: "datetime", arity: "scalar" }, { scalarType: "datetime", arity: "scalar" }, { scalarType: "int", arity: "scalar" }]
     });
 
     // Query the migration data - this should not cause "unknown decltype" warnings
@@ -87,7 +87,7 @@ describe("INTEGER UNSIGNED Type Support", () => {
     await adapter.executeRaw({
       sql: "INSERT INTO test_table VALUES (?, ?, ?)",
       args: ["test1", 42, 24],
-      argTypes: ["Text", "Int32", "Int32"]
+      argTypes: [{ scalarType: "string", arity: "scalar" }, { scalarType: "int", arity: "scalar" }, { scalarType: "int", arity: "scalar" }]
     });
 
     const result = await adapter.queryRaw({

@@ -102,7 +102,7 @@ describe("PrismaBunSQLiteAdapterFactory", () => {
       await adapter.executeRaw({
         sql: "INSERT INTO test_table (name) VALUES (?)",
         args: ["Test Name"],
-        argTypes: ["Text"]
+        argTypes: [{ scalarType: "string", arity: "scalar" }]
       });
 
       const result = await adapter.queryRaw({

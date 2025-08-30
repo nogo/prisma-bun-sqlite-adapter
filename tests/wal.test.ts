@@ -1,7 +1,5 @@
 import { describe, expect, test, beforeEach, afterEach } from "bun:test";
-import { Database } from "bun:sqlite";
 import { PrismaBunSQLiteAdapterFactory } from "../src/adapter";
-import { DriverAdapterError } from "@prisma/driver-adapter-utils";
 
 describe("WAL Mode Configuration", () => {
   let tempDbPath: string;

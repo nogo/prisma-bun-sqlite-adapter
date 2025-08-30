@@ -62,7 +62,7 @@ describe("Transaction Tests", () => {
       const result = await transaction.queryRaw({
         sql: "SELECT * FROM accounts WHERE name = ?",
         args: ["Alice"],
-        argTypes: ["Text"]
+        argTypes: [{ scalarType: "string", arity: "scalar" }]
       });
 
       expect(result.rows).toHaveLength(1);
@@ -78,7 +78,7 @@ describe("Transaction Tests", () => {
       const updateResult = await transaction.executeRaw({
         sql: "UPDATE accounts SET balance = balance - ? WHERE name = ?",
         args: ["100", "Alice"],
-        argTypes: ["Int32", "Text"]
+        argTypes: [{ scalarType: "int", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
       });
 
       expect(updateResult).toBe(1);
@@ -87,7 +87,7 @@ describe("Transaction Tests", () => {
       const selectResult = await transaction.queryRaw({
         sql: "SELECT balance FROM accounts WHERE name = ?",
         args: ["Alice"],
-        argTypes: ["Text"]
+        argTypes: [{ scalarType: "string", arity: "scalar" }]
       });
 
       expect(selectResult.rows[0][0]).toBe(900);
@@ -104,13 +104,13 @@ describe("Transaction Tests", () => {
       await transaction.executeRaw({
         sql: "UPDATE accounts SET balance = balance - ? WHERE name = ?",
         args: ["200", "Alice"],
-        argTypes: ["Int32", "Text"]
+        argTypes: [{ scalarType: "int", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
       });
 
       await transaction.executeRaw({
         sql: "UPDATE accounts SET balance = balance + ? WHERE name = ?",
         args: ["200", "Bob"],
-        argTypes: ["Int32", "Text"]
+        argTypes: [{ scalarType: "int", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
       });
 
       await transaction.commit();
@@ -119,13 +119,13 @@ describe("Transaction Tests", () => {
       const aliceBalance = await adapter.queryRaw({
         sql: "SELECT balance FROM accounts WHERE name = ?",
         args: ["Alice"],
-        argTypes: ["Text"]
+        argTypes: [{ scalarType: "string", arity: "scalar" }]
       });
 
       const bobBalance = await adapter.queryRaw({
         sql: "SELECT balance FROM accounts WHERE name = ?",
         args: ["Bob"],
-        argTypes: ["Text"]
+        argTypes: [{ scalarType: "string", arity: "scalar" }]
       });
 
       expect(aliceBalance.rows[0][0]).toBe(800);
@@ -141,13 +141,13 @@ describe("Transaction Tests", () => {
       await transaction.executeRaw({
         sql: "UPDATE accounts SET balance = balance - ? WHERE name = ?",
         args: ["200", "Alice"],
-        argTypes: ["Int32", "Text"]
+        argTypes: [{ scalarType: "int", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
       });
 
       await transaction.executeRaw({
         sql: "UPDATE accounts SET balance = balance + ? WHERE name = ?",
         args: ["200", "Bob"],
-        argTypes: ["Int32", "Text"]
+        argTypes: [{ scalarType: "int", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
       });
 
       await transaction.rollback();
@@ -156,13 +156,13 @@ describe("Transaction Tests", () => {
       const aliceBalance = await adapter.queryRaw({
         sql: "SELECT balance FROM accounts WHERE name = ?",
         args: ["Alice"],
-        argTypes: ["Text"]
+        argTypes: [{ scalarType: "string", arity: "scalar" }]
       });
 
       const bobBalance = await adapter.queryRaw({
         sql: "SELECT balance FROM accounts WHERE name = ?",
         args: ["Bob"],
-        argTypes: ["Text"]
+        argTypes: [{ scalarType: "string", arity: "scalar" }]
       });
 
       expect(aliceBalance.rows[0][0]).toBe(1000); // Original balance
@@ -177,14 +177,14 @@ describe("Transaction Tests", () => {
         await transaction.executeRaw({
           sql: "UPDATE accounts SET balance = balance - ? WHERE name = ?",
           args: ["200", "Alice"],
-          argTypes: ["Int32", "Text"]
+          argTypes: [{ scalarType: "int", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
         });
 
         // Invalid update (syntax error)
         await transaction.executeRaw({
           sql: "UPDATE accounts SET invalid_column = ? WHERE name = ?",
           args: ["200", "Bob"],
-          argTypes: ["Int32", "Text"]
+          argTypes: [{ scalarType: "int", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
         });
       } catch (error) {
         await transaction.rollback();
@@ -194,7 +194,7 @@ describe("Transaction Tests", () => {
       const aliceBalance = await adapter.queryRaw({
         sql: "SELECT balance FROM accounts WHERE name = ?",
         args: ["Alice"],
-        argTypes: ["Text"]
+        argTypes: [{ scalarType: "string", arity: "scalar" }]
       });
 
       expect(aliceBalance.rows[0][0]).toBe(1000); // Original balance
@@ -209,14 +209,14 @@ describe("Transaction Tests", () => {
       await transaction1.executeRaw({
         sql: "UPDATE accounts SET balance = ? WHERE name = ?",
         args: ["999", "Alice"],
-        argTypes: ["Int32", "Text"]
+        argTypes: [{ scalarType: "int", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
       });
 
       // Read from within transaction should see updated value
       const insideRead = await transaction1.queryRaw({
         sql: "SELECT balance FROM accounts WHERE name = ?",
         args: ["Alice"],
-        argTypes: ["Text"]
+        argTypes: [{ scalarType: "string", arity: "scalar" }]
       });
 
       expect(insideRead.rows[0][0]).toBe(999); // Updated value
@@ -227,7 +227,7 @@ describe("Transaction Tests", () => {
       const afterRollback = await adapter.queryRaw({
         sql: "SELECT balance FROM accounts WHERE name = ?",
         args: ["Alice"],
-        argTypes: ["Text"]
+        argTypes: [{ scalarType: "string", arity: "scalar" }]
       });
 
       expect(afterRollback.rows[0][0]).toBe(1000); // Original value
@@ -241,7 +241,7 @@ describe("Transaction Tests", () => {
       await transaction1.executeRaw({
         sql: "UPDATE accounts SET balance = ? WHERE name = ?",
         args: ["900", "Alice"],
-        argTypes: ["Int32", "Text"]
+        argTypes: [{ scalarType: "int", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
       });
       await transaction1.commit();
 
@@ -250,7 +250,7 @@ describe("Transaction Tests", () => {
       await transaction2.executeRaw({
         sql: "UPDATE accounts SET balance = ? WHERE name = ?",
         args: ["800", "Alice"],
-        argTypes: ["Int32", "Text"]
+        argTypes: [{ scalarType: "int", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
       });
       await transaction2.commit();
 
@@ -258,7 +258,7 @@ describe("Transaction Tests", () => {
       const finalBalance = await adapter.queryRaw({
         sql: "SELECT balance FROM accounts WHERE name = ?",
         args: ["Alice"],
-        argTypes: ["Text"]
+        argTypes: [{ scalarType: "string", arity: "scalar" }]
       });
 
       expect(finalBalance.rows[0][0]).toBe(800);
@@ -272,7 +272,7 @@ describe("Transaction Tests", () => {
       await transaction.executeRaw({
         sql: "UPDATE accounts SET balance = balance - ? WHERE name = ?",
         args: ["100", "Alice"],
-        argTypes: ["Int32", "Text"]
+        argTypes: [{ scalarType: "int", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
       });
 
       await transaction.commit();
@@ -287,7 +287,7 @@ describe("Transaction Tests", () => {
       await transaction.executeRaw({
         sql: "UPDATE accounts SET balance = balance - ? WHERE name = ?",
         args: ["100", "Alice"],
-        argTypes: ["Int32", "Text"]
+        argTypes: [{ scalarType: "int", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
       });
 
       await transaction.commit();
@@ -302,7 +302,7 @@ describe("Transaction Tests", () => {
       await transaction.executeRaw({
         sql: "UPDATE accounts SET balance = balance - ? WHERE name = ?",
         args: ["100", "Alice"],
-        argTypes: ["Int32", "Text"]
+        argTypes: [{ scalarType: "int", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
       });
 
       await transaction.rollback();
@@ -317,7 +317,7 @@ describe("Transaction Tests", () => {
       await transaction.executeRaw({
         sql: "UPDATE accounts SET balance = balance - ? WHERE name = ?",
         args: ["100", "Alice"],
-        argTypes: ["Int32", "Text"]
+        argTypes: [{ scalarType: "int", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
       });
 
       await transaction.commit();
@@ -326,7 +326,7 @@ describe("Transaction Tests", () => {
         await transaction.queryRaw({
           sql: "SELECT * FROM accounts WHERE name = ?",
           args: ["Alice"],
-          argTypes: ["Text"]
+          argTypes: [{ scalarType: "string", arity: "scalar" }]
         });
         expect.unreachable("Should have thrown error");
       } catch (error) {
@@ -341,7 +341,7 @@ describe("Transaction Tests", () => {
       await transaction.executeRaw({
         sql: "UPDATE accounts SET balance = balance - ? WHERE name = ?",
         args: ["100", "Alice"],
-        argTypes: ["Int32", "Text"]
+        argTypes: [{ scalarType: "int", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
       });
 
       await transaction.rollback();
@@ -350,7 +350,7 @@ describe("Transaction Tests", () => {
         await transaction.executeRaw({
           sql: "UPDATE accounts SET balance = balance + ? WHERE name = ?",
           args: ["50", "Bob"],
-          argTypes: ["Int32", "Text"]
+          argTypes: [{ scalarType: "int", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
         });
         expect.unreachable("Should have thrown error");
       } catch (error) {
@@ -365,7 +365,7 @@ describe("Transaction Tests", () => {
       await transaction.executeRaw({
         sql: "UPDATE accounts SET balance = balance - ? WHERE name = ?",
         args: ["100", "Alice"],
-        argTypes: ["Int32", "Text"]
+        argTypes: [{ scalarType: "int", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
       });
 
       await transaction.rollback();

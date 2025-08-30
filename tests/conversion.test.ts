@@ -291,7 +291,10 @@ describe("Conversion Utilities", () => {
   describe("mapQueryArgs", () => {
     it("should parse Int32 arguments", () => {
       const args = ["42", "100"];
-      const argTypes: ArgType[] = ["Int32", "Int32"];
+      const argTypes: ArgType[] = [
+        { scalarType: "int", arity: "scalar" },
+        { scalarType: "int", arity: "scalar" }
+      ];
 
       const result = mapQueryArgs(args, argTypes);
 
@@ -300,7 +303,10 @@ describe("Conversion Utilities", () => {
 
     it("should parse Float and Double arguments", () => {
       const args = ["3.14", "2.718"];
-      const argTypes: ArgType[] = ["Float", "Double"];
+      const argTypes: ArgType[] = [
+        { scalarType: "float", arity: "scalar" },
+        { scalarType: "decimal", arity: "scalar" }
+      ];
 
       const result = mapQueryArgs(args, argTypes);
 
@@ -309,7 +315,10 @@ describe("Conversion Utilities", () => {
 
     it("should convert boolean to 1/0", () => {
       const args = [true, false];
-      const argTypes: ArgType[] = ["Boolean", "Boolean"];
+      const argTypes: ArgType[] = [
+        { scalarType: "boolean", arity: "scalar" },
+        { scalarType: "boolean", arity: "scalar" }
+      ];
 
       const result = mapQueryArgs(args, argTypes);
 
@@ -319,7 +328,7 @@ describe("Conversion Utilities", () => {
     it("should format Date objects for SQLite", () => {
       const date = new Date("2022-01-01T12:30:45.123Z");
       const args = [date];
-      const argTypes: ArgType[] = ["DateTime"];
+      const argTypes: ArgType[] = [{ scalarType: "datetime", arity: "scalar" }];
 
       const result = mapQueryArgs(args, argTypes);
 
@@ -329,7 +338,7 @@ describe("Conversion Utilities", () => {
     it("should preserve Uint8Array for blobs", () => {
       const blobData = new Uint8Array([1, 2, 3, 4]);
       const args = [blobData];
-      const argTypes: ArgType[] = ["Bytes"];
+      const argTypes: ArgType[] = [{ scalarType: "bytes", arity: "scalar" }];
 
       const result = mapQueryArgs(args, argTypes);
 
@@ -345,7 +354,7 @@ describe("Conversion Utilities", () => {
       view[3] = 4;
 
       const args = [buffer];
-      const argTypes: ArgType[] = ["Bytes"];
+      const argTypes: ArgType[] = [{ scalarType: "bytes", arity: "scalar" }];
 
       const result = mapQueryArgs(args, argTypes);
 
@@ -355,7 +364,11 @@ describe("Conversion Utilities", () => {
 
     it("should preserve other argument types unchanged", () => {
       const args = ["text", null, undefined];
-      const argTypes: ArgType[] = ["Text", "Text", "Text"];
+      const argTypes: ArgType[] = [
+        { scalarType: "string", arity: "scalar" },
+        { scalarType: "string", arity: "scalar" },
+        { scalarType: "string", arity: "scalar" }
+      ];
 
       const result = mapQueryArgs(args, argTypes);
 
@@ -366,7 +379,15 @@ describe("Conversion Utilities", () => {
       const date = new Date("2022-01-01T12:00:00.000Z");
       const blob = new Uint8Array([1, 2, 3]);
       const args = ["42", "3.14", true, false, date, blob, "text"];
-      const argTypes: ArgType[] = ["Int32", "Float", "Boolean", "Boolean", "DateTime", "Bytes", "Text"];
+      const argTypes: ArgType[] = [
+        { scalarType: "int", arity: "scalar" },
+        { scalarType: "float", arity: "scalar" },
+        { scalarType: "boolean", arity: "scalar" },
+        { scalarType: "boolean", arity: "scalar" },
+        { scalarType: "datetime", arity: "scalar" },
+        { scalarType: "bytes", arity: "scalar" },
+        { scalarType: "string", arity: "scalar" }
+      ];
 
       const result = mapQueryArgs(args, argTypes);
 

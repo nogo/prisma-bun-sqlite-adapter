@@ -57,8 +57,36 @@ class BunSQLiteQueryable implements SqlQueryable {
 
   private async executeIO(query: SqlQuery): Promise<{ changes: number }> {
     try {
+      // Check if this is a multi-statement script
+      const statements = query.sql.split(';').filter(s => s.trim()).filter(s => !s.startsWith('--'));
+      if (statements.length > 1) {
+        debug("Executing multi-statement script by splitting into individual statements");
+        // For multi-statement scripts, execute each statement individually
+        if (query.args && query.args.length > 0) {
+          throw new Error("Multi-statement scripts with parameters are not supported");
+        }
+        
+        let totalChanges = 0;
+        for (const statement of statements) {
+          const trimmed = statement.trim();
+          if (trimmed) {
+            try {
+              const stmt = this.db.query(trimmed);
+              const result = stmt.run();
+              totalChanges += result.changes;
+            } catch (stmtError) {
+              debug("Statement failed: %s, Error: %O", trimmed.substring(0, 50), stmtError);
+              throw stmtError;
+            }
+          }
+        }
+        return Promise.resolve({ changes: totalChanges });
+      }
+      
+      // Single statement
       const stmt = this.db.query(query.sql);
-      const result = stmt.run(...(mapQueryArgs(query.args, query.argTypes) as any));
+      const args = mapQueryArgs(query.args, query.argTypes);
+      const result = stmt.run(...(args as any));
       return Promise.resolve({ changes: result.changes });
     } catch (e) {
       this.onError(e);
@@ -172,7 +200,7 @@ class BunSQLiteTransaction extends BunSQLiteQueryable implements Transaction {
       });
     }
 
-    // Handle COMMIT/ROLLBACK statements specially
+    // Handle COMMIT/ROLLBACK statements specially to avoid double execution
     const sql = query.sql.trim().toUpperCase();
     if (sql === 'COMMIT') {
       await this.commit();
@@ -189,13 +217,12 @@ class BunSQLiteTransaction extends BunSQLiteQueryable implements Transaction {
   commit(): Promise<void> {
     debug(`[js::commit]`);
     if (this._state !== 'active') {
-      // Silently handle multiple commit attempts (might happen if Prisma calls both executeRaw("COMMIT") and commit())
       debug(`[js::commit] Transaction already closed (state: ${this._state}), ignoring commit`);
       return Promise.resolve();
     }
 
     try {
-      // Execute COMMIT directly on database, bypassing our executeRaw to avoid recursion
+      // Execute COMMIT directly on database
       this.db.query("COMMIT").run();
       this._state = 'committed';
     } catch (e) {
@@ -211,14 +238,12 @@ class BunSQLiteTransaction extends BunSQLiteQueryable implements Transaction {
   rollback(): Promise<void> {
     debug(`[js::rollback]`);
     if (this._state !== 'active') {
-      // Silently ignore rollback attempts on already closed transactions
-      // This handles Prisma's cleanup behavior where it may try to rollback after commit
       debug(`[js::rollback] Transaction already closed (state: ${this._state}), ignoring rollback`);
       return Promise.resolve();
     }
 
     try {
-      // Execute ROLLBACK directly on database, bypassing our executeRaw to avoid recursion
+      // Execute ROLLBACK directly on database
       this.db.query("ROLLBACK").run();
       this._state = 'rolled_back';
     } catch (e) {
@@ -253,8 +278,43 @@ export class PrismaBunSQLiteAdapter
       if (script.trim() === "") {
         return Promise.resolve();
       }
-      this.db.exec(script);
+      debug("[js::executeScript] Running script: %s", script.substring(0, 100) + (script.length > 100 ? '...' : ''));
+      
+      // Check if we can test database connectivity first
+      try {
+        this.db.query("SELECT 1").get();
+        debug("[js::executeScript] Database connectivity verified");
+      } catch (dbError) {
+        debug("[js::executeScript] Database connectivity issue: %O", dbError);
+        throw dbError;
+      }
+      
+      // Use the same logic as executeIO for consistency
+      const statements = script.split(';').filter(s => s.trim()).filter(s => !s.startsWith('--'));
+      if (statements.length > 1) {
+        debug("[js::executeScript] Multi-statement script detected (%d statements), executing individually", statements.length);
+        for (let i = 0; i < statements.length; i++) {
+          const trimmed = statements[i].trim();
+          if (trimmed) {
+            try {
+              debug("[js::executeScript] Executing statement %d: %s", i + 1, trimmed.substring(0, 50) + '...');
+              const stmt = this.db.query(trimmed);
+              stmt.run();
+            } catch (stmtError) {
+              debug("[js::executeScript] Statement %d failed: %s", i + 1, trimmed.substring(0, 100));
+              debug("[js::executeScript] Statement error: %O", stmtError);
+              throw stmtError;
+            }
+          }
+        }
+      } else {
+        // Single statement or fallback to exec
+        this.db.exec(script);
+      }
+      
+      debug("[js::executeScript] Script completed successfully");
     } catch (e) {
+      debug("[js::executeScript] Script failed: %O", e);
       this.onError(e);
     }
     return Promise.resolve();
@@ -322,7 +382,7 @@ export class PrismaBunSQLiteAdapterFactory
 
 function createBunSqliteClient(input: BunSQLiteFactoryParams): StdClient {
   const { url, walMode } = input
-  const filename = url.replace(/^file:/, '').replace("//", "")
+  const filename = url.replace(/^file:/, '')
   const db = new Database(filename, { safeIntegers: true })
 
   // Configure WAL mode if enabled

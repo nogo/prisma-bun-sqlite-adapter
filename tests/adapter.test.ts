@@ -52,7 +52,7 @@ describe("PrismaBunSQLiteAdapter", () => {
       const result = await adapter.queryRaw({
         sql: "SELECT * FROM users WHERE age > ? AND name = ?",
         args: ["20", "Alice"],
-        argTypes: ["Int32", "Text"]
+        argTypes: [{ scalarType: "int", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
       });
 
       expect(result.rows).toHaveLength(1);
@@ -63,7 +63,7 @@ describe("PrismaBunSQLiteAdapter", () => {
       const result = await adapter.queryRaw({
         sql: "SELECT * FROM users WHERE id = ?",
         args: ["999"],
-        argTypes: ["Int32"]
+        argTypes: [{ scalarType: "int", arity: "scalar" }]
       });
 
       expect(result.columnNames).toEqual(['id', 'name', 'email', 'age', 'is_active', 'created_at', 'profile_data']);
@@ -78,7 +78,7 @@ describe("PrismaBunSQLiteAdapter", () => {
       const result = await adapter.queryRaw({
         sql: "SELECT profile_data FROM users WHERE name = ?",
         args: ["Test User"],
-        argTypes: ["Text"]
+        argTypes: [{ scalarType: "string", arity: "scalar" }]
       });
 
       expect(result.rows[0][0]).toEqual([1, 2, 3, 4, 5]);
@@ -90,7 +90,7 @@ describe("PrismaBunSQLiteAdapter", () => {
       const result = await adapter.executeRaw({
         sql: "INSERT INTO users (name, email, age) VALUES (?, ?, ?)",
         args: ["Charlie", "charlie@test.com", "35"],
-        argTypes: ["Text", "Text", "Int32"]
+        argTypes: [{ scalarType: "string", arity: "scalar" }, { scalarType: "string", arity: "scalar" }, { scalarType: "int", arity: "scalar" }]
       });
 
       expect(result).toBe(1);
@@ -99,7 +99,7 @@ describe("PrismaBunSQLiteAdapter", () => {
       const selectResult = await adapter.queryRaw({
         sql: "SELECT name FROM users WHERE email = ?",
         args: ["charlie@test.com"],
-        argTypes: ["Text"]
+        argTypes: [{ scalarType: "string", arity: "scalar" }]
       });
       expect(selectResult.rows[0][0]).toBe("Charlie");
     });
@@ -111,7 +111,7 @@ describe("PrismaBunSQLiteAdapter", () => {
       const result = await adapter.executeRaw({
         sql: "UPDATE users SET age = ? WHERE name = ?",
         args: ["26", "Alice"],
-        argTypes: ["Int32", "Text"]
+        argTypes: [{ scalarType: "int", arity: "scalar" }, { scalarType: "string", arity: "scalar" }]
       });
 
       expect(result).toBe(1);
@@ -124,7 +124,7 @@ describe("PrismaBunSQLiteAdapter", () => {
       const result = await adapter.executeRaw({
         sql: "DELETE FROM users WHERE age > ?",
         args: ["28"],
-        argTypes: ["Int32"]
+        argTypes: [{ scalarType: "int", arity: "scalar" }]
       });
 
       expect(result).toBe(1);

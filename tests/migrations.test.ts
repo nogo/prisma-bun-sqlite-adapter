@@ -44,7 +44,7 @@ describe("Prisma Migrations Integration", () => {
           "2025-08-20T14:42:26.577+00:00",
           "1"
         ],
-        argTypes: ["Text", "Text", "Text", "DateTime", "DateTime", "Int32"]
+        argTypes: [{ scalarType: "string", arity: "scalar" }, { scalarType: "string", arity: "scalar" }, { scalarType: "string", arity: "scalar" }, { scalarType: "datetime", arity: "scalar" }, { scalarType: "datetime", arity: "scalar" }, { scalarType: "int", arity: "scalar" }]
       });
 
       // Query the migrations table exactly as Prisma does
@@ -201,7 +201,7 @@ describe("Prisma Migrations Integration", () => {
       const result = await adapter.queryRaw({
         sql: `SELECT started_at FROM "_prisma_migrations" WHERE id = ?`,
         args: ["current-timestamp-test"],
-        argTypes: ["Text"]
+        argTypes: [{ scalarType: "string", arity: "scalar" }]
       });
 
       expect(result.rows).toHaveLength(1);
