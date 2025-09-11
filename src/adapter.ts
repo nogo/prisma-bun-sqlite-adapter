@@ -93,40 +93,6 @@ class BunSQLiteQueryable implements SqlQueryable {
     }
   }
 
-  private getTableFromQuery(sql: string): string | null {
-    // Simple regex to extract table name from SELECT queries
-    // This handles common cases like SELECT ... FROM table, SELECT ... FROM "table", etc.
-    const match = sql.match(/\bFROM\s+(?:`([^`]+)`|"([^"]+)"|(\w+))/i);
-    return match ? (match[1] || match[2] || match[3]) : null;
-  }
-
-  private async getColumnTypes(tableName: string, columnNames: string[]): Promise<Array<string | null>> {
-    try {
-      const tableInfoStmt = this.db.query(`PRAGMA table_info(${tableName})`);
-      const tableInfo = tableInfoStmt.all() as Array<{
-        cid: number;
-        name: string;
-        type: string;
-        notnull: number;
-        dflt_value: string | null;
-        pk: number;
-      }>;
-
-      // Create a map of column names to types
-      const typeMap = new Map<string, string>();
-      tableInfo.forEach(col => {
-        typeMap.set(col.name, col.type);
-      });
-
-      // Return types in the same order as columnNames
-      return columnNames.map(name => typeMap.get(name) || null);
-    } catch (e) {
-      debug("Failed to get column types for table %s: %O", tableName, e);
-      // Fall back to null types if we can't get schema info
-      return columnNames.map(() => null);
-    }
-  }
-
   private async performIO(query: SqlQuery): Promise<BunSQLiteResultSet> {
     try {
       const stmt = this.db.query(query.sql);
