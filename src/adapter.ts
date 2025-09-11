@@ -109,7 +109,7 @@ class BunSQLiteQueryable implements SqlQueryable {
         });
       }
 
-      // Try to get proper column types from table schema
+      // Schema-declared types may be available. Will be `null` for e.g. computed columns or expressions
       const declaredTypes: Array<string | null> = stmt.declaredTypes;
 
       const resultSet = {
