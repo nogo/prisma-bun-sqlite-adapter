@@ -144,13 +144,7 @@ class BunSQLiteQueryable implements SqlQueryable {
       }
 
       // Try to get proper column types from table schema
-      let declaredTypes: Array<string | null>;
-      const tableName = this.getTableFromQuery(query.sql);
-      if (tableName) {
-        declaredTypes = await this.getColumnTypes(tableName, columns);
-      } else {
-        declaredTypes = columns.map((col: any) => null);
-      }
+      const declaredTypes: Array<string | null> = stmt.declaredTypes;
 
       const resultSet = {
         declaredTypes,
