@@ -3,3 +3,4 @@ dist
 bun.lock
 .claude
 CLAUDE.md
+.idea

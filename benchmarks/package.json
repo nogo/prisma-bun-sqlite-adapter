@@ -1,0 +1,28 @@
+{
+  "name": "prisma-bun-sqlite-adapter-benchmarks",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "Performance benchmarks for Prisma Bun SQLite adapter",
+  "scripts": {
+    "setup": "bunx prisma generate && bunx prisma migrate dev --name init",
+    "seed": "bun seed.ts",
+    "bench": "bun runner.ts",
+    "bench:quick": "bun runner.ts --quick",
+    "bench:seed": "bun runner.ts --seed",
+    "compare": "bun compare-adapters.ts",
+    "compare:quick": "bun compare-adapters.ts --quick",
+    "compare:seed": "bun compare-adapters.ts --seed",
+    "visualize": "bun visualize.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^7.0.0",
+    "@synapsenwerkstatt/prisma-bun-sqlite-adapter": "file:.."
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^9.2.0",
+    "prisma": "^7.0.0",
+    "@prisma/adapter-libsql": "^7.0.0",
+    "@libsql/client": "^0.14.0"
+  }
+}

@@ -1,0 +1,107 @@
+// Benchmark schema with realistic relations
+// Based on Prisma's blog benchmark methodology
+// Prisma 7 - URL configured in prisma.config.ts
+
+generator client {
+  provider = "prisma-client"
+  output = "generated"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  posts     Post[]
+  profile   Profile?
+  orders    Order[]
+}
+
+model Profile {
+  id        Int      @id @default(autoincrement())
+  bio       String?
+  avatar    String?
+  userId    Int      @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Post {
+  id          Int        @id @default(autoincrement())
+  title       String
+  content     String?
+  published   Boolean    @default(false)
+  authorId    Int
+  author      User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  categoryId  Int
+  category    Category   @relation(fields: [categoryId], references: [id])
+  tags        Tag[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([published])
+}
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  posts     Post[]
+  createdAt DateTime @default(now())
+}
+
+model Tag {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  posts     Post[]
+  createdAt DateTime @default(now())
+}
+
+model Order {
+  id          Int         @id @default(autoincrement())
+  orderNumber String      @unique
+  total       Float
+  status      String      @default("pending")
+  userId      Int
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items       OrderItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model OrderItem {
+  id        Int      @id @default(autoincrement())
+  orderId   Int
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Float
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Product {
+  id          Int         @id @default(autoincrement())
+  name        String
+  description String?
+  price       Float
+  stock       Int         @default(0)
+  items       OrderItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([price])
+}
