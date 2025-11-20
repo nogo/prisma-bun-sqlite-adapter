@@ -1,0 +1,12 @@
+# Benchmark artifacts
+*.db
+*.db-shm
+*.db-wal
+results/
+node_modules/
+
+# Environment
+.env
+
+# Prisma
+migrations/
